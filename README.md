@@ -109,16 +109,18 @@ The "Out of Water" class has fewer samples, which may affect model performance f
   - HSV adjustment, translation, scaling, flipping, Mosaic, and Mixup.
 - **Optimization Parameters**:
   - Initial Learning Rate: 0.001
-  - Final Learning Rate: 0.01
+  - Final Learning Rate Factor (`lrf`): 0.01 (final LR = 0.001 × 0.01)
   - Momentum: 0.937
   - Weight Decay: 0.0005
 - **Class Balancing**:
-  - Automatic calculation of class weights
-  - Focal loss enabled
+  - Class weights are computed and printed for reference only; Ultralytics YOLO does not accept per-class weights
+  - No focal loss is used (`cls` gain raised to 1.0 in `train.py` instead)
 - **Model Parameters**:
   - Pretrained Model: `yolo11x.pt`
-  - Frozen Layers: `backbone` and `head`
-  - Multi-scale training
+  - Frozen Layers: none
+  - Multi-scale training, AdamW, cosine LR schedule
+
+> **Note:** the published `best.pt` and everything under `results/training/` were produced with the configuration recorded in [`results/training/args.yaml`](results/training/args.yaml): `optimizer: auto`, `cos_lr: false`, `multi_scale: false`, `cls: 0.5`. The current `src/train.py` uses the settings listed above, so retraining with it will not reproduce those numbers exactly.
 
 ### Training Process
 
@@ -245,7 +247,7 @@ model.export(format='onnx', imgsz=config.img_size)
 
 ```python
 metrics = model.val()
-print(f"Validation Results: mAP@0.5={metrics.box.map:.2f}, mAP@0.5:0.95={metrics.box.map50:.2f}")
+print(f"Validation Results: mAP@0.5={metrics.box.map50:.2f}, mAP@0.5:0.95={metrics.box.map:.2f}")
 ```
 
 ## Improvement Suggestions

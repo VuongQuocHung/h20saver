@@ -7,81 +7,80 @@ from collections import defaultdict
 
 
 # ----------------------------
-# 初始化配置
+# Khởi tạo cấu hình
 # ----------------------------
 
-# 中文字体配置
-plt.rcParams['font.sans-serif'] = ['Arial Unicode MS']
+plt.rcParams['font.sans-serif'] = ['Segoe UI', 'Arial', 'DejaVu Sans']
 plt.rcParams['axes.unicode_minus'] = False
 
-# 创建输出目录
+# Tạo thư mục đầu ra
 output_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data_analysis.out")
 os.makedirs(output_dir, exist_ok=True)
 
-# 初始化统计计数器
+# Khởi tạo bộ đếm thống kê
 stats = {
-    "total_images": 0,          # 总图像数量
-    "missing_labels": 0,        # 缺失标注文件数量
-    "corrupted_images": 0,      # 损坏/不可读图像数量
-    "invalid_annotations": 0    # 无效标注行数
+    "total_images": 0,          # Tổng số ảnh
+    "missing_labels": 0,        # Số file nhãn bị thiếu
+    "corrupted_images": 0,      # Số ảnh hỏng/không đọc được
+    "invalid_annotations": 0    # Số dòng nhãn không hợp lệ
 }
 
 # ----------------------------
-# 加载数据集配置
+# Nạp cấu hình dataset
 # ----------------------------
-# 定位 data.yaml 文件
+# Xác định vị trí file data.yaml
 script_dir = os.path.dirname(os.path.abspath(__file__))
 data_yaml_path = os.path.join(script_dir, "dataset", "data.yaml")
 
 if not os.path.exists(data_yaml_path):
-    print(f"错误: data.yaml 文件不存在 - {data_yaml_path}")
+    print(f"Lỗi: không tìm thấy file data.yaml - {data_yaml_path}")
     exit()
 
-# 读取配置文件
+# Đọc file cấu hình
 with open(data_yaml_path, "r") as file:
     data = yaml.safe_load(file)
 
-# 动态构建路径
-base_dir = os.path.dirname(data_yaml_path)  # 数据集根目录
+# Dựng đường dẫn động
+base_dir = os.path.dirname(data_yaml_path)  # Thư mục gốc của dataset
 class_names = data["names"]
 
-# 构建数据集路径
+# Dựng đường dẫn các tập dữ liệu
 train_dir = os.path.join(base_dir, data["train"])
 val_dir = os.path.join(base_dir, data["val"])
 test_dir = os.path.join(base_dir, data["test"])
 
-# 构建标注目录
+# Dựng đường dẫn thư mục nhãn
 train_label_dir = os.path.join(base_dir, "train/labels")
 val_label_dir = os.path.join(base_dir, "valid/labels")
 test_label_dir = os.path.join(base_dir, "test/labels")
 
-# 检查关键目录是否存在
+# Kiểm tra các thư mục quan trọng có tồn tại không
 for path in [train_dir, val_dir, test_dir]:
     if not os.path.exists(path):
-        print(f"错误：目录不存在 - {path}")
+        print(f"Lỗi: thư mục không tồn tại - {path}")
         exit()
 
 # ----------------------------
-# 1. 统计类别分布
+# 1. Thống kê phân bố lớp
 # ----------------------------
 def count_class_distribution(image_dir, label_dir):
     image_dir = os.path.join(image_dir, "images")
     class_counts = defaultdict(int)
     
-    # 遍历图像文件检查标注
+    # Duyệt các file ảnh để kiểm tra nhãn
     image_files = [f for f in os.listdir(image_dir) if f.endswith((".jpg", ".png"))]
-    stats["total_images"] += len(image_files)  # 统计总图像数
+    stats["total_images"] += len(image_files)  # Cộng dồn tổng số ảnh
     
     for img_file in image_files:
         label_file = img_file.rsplit(".", 1)[0] + ".txt"
         label_path = os.path.join(label_dir, label_file)
         
-        # 检查标注文件是否存在
+        # Kiểm tra file nhãn có tồn tại không
         if not os.path.exists(label_path):
             stats["missing_labels"] += 1
-            continue  # 跳过缺失标注的文件
+            continue  # Bỏ qua ảnh không có nhãn
 
-    # 统计有效标注
+    # Thống kê các nhãn hợp lệ
     label_files = [f for f in os.listdir(label_dir) if f.endswith(".txt")]
     for label_file in label_files:
         label_path = os.path.join(label_dir, label_file)
@@ -95,28 +94,28 @@ def count_class_distribution(image_dir, label_dir):
                     except:
                         stats["invalid_annotations"] += 1
         except Exception as e:
-            print(f"读取标注文件失败: {label_path} - {str(e)}")
+            print(f"Đọc file nhãn thất bại: {label_path} - {str(e)}")
     
     return class_counts
 
-# 统计各数据集分布
+# Thống kê phân bố của từng tập dữ liệu
 train_counts = count_class_distribution(train_dir, train_label_dir)
 val_counts = count_class_distribution(val_dir, val_label_dir)
 test_counts = count_class_distribution(test_dir, test_label_dir)
 
-# 绘制类别分布图
+# Vẽ biểu đồ phân bố lớp
 fig, ax = plt.subplots(figsize=(10, 6))
 x = np.arange(len(class_names))
 width = 0.25
 
-ax.bar(x - width, [train_counts[i] for i in range(len(class_names))], width, label="训练集")
-ax.bar(x, [val_counts[i] for i in range(len(class_names))], width, label="验证集")
-ax.bar(x + width, [test_counts[i] for i in range(len(class_names))], width, label="测试集")
+ax.bar(x - width, [train_counts[i] for i in range(len(class_names))], width, label="Tập train")
+ax.bar(x, [val_counts[i] for i in range(len(class_names))], width, label="Tập validation")
+ax.bar(x + width, [test_counts[i] for i in range(len(class_names))], width, label="Tập test")
 
 ax.set_xticks(x)
 ax.set_xticklabels(class_names, rotation=45)
-ax.set_ylabel("样本数量")
-ax.set_title("数据集的类别分布")
+ax.set_ylabel("Số mẫu")
+ax.set_title("Phân bố lớp của các tập dữ liệu")
 ax.legend()
 
 plt.savefig(os.path.join(output_dir, "class_distribution.png"), bbox_inches="tight")
@@ -124,7 +123,7 @@ plt.close()
 
 
 # ----------------------------
-# 2. 标注框分析
+# 2. Phân tích bounding box
 # ----------------------------
 def analyze_bbox(label_dir):
     widths, heights, centers_x, centers_y = [], [], [], []
@@ -147,32 +146,32 @@ def analyze_bbox(label_dir):
     return widths, heights, centers_x, centers_y
 
 # ----------------------------
-# 3. 绘制分析图
+# 3. Vẽ các biểu đồ phân tích
 # ----------------------------
 
 widths, heights, centers_x, centers_y = analyze_bbox(train_label_dir)
 
 plt.figure(figsize=(15, 6))
 
-# 尺寸分布
+# Phân bố kích thước
 plt.subplot(1, 2, 1)
-plt.hist([widths, heights], bins=50, label=["宽度", "高度"], alpha=0.7)
-plt.xlabel("归一化尺寸值")
-plt.ylabel("频次")
-plt.title("标注框尺寸分布")
+plt.hist([widths, heights], bins=50, label=["Chiều rộng", "Chiều cao"], alpha=0.7)
+plt.xlabel("Kích thước đã chuẩn hoá")
+plt.ylabel("Tần suất")
+plt.title("Phân bố kích thước bounding box")
 plt.legend()
 
-# 中心点分布
+# Phân bố tâm box
 plt.subplot(1, 2, 2)
 plt.scatter(centers_x, centers_y, s=5, alpha=0.3)
-plt.xlabel("归一化X坐标")
-plt.ylabel("归一化Y坐标")
-plt.title("标注框中心点分布")
+plt.xlabel("Toạ độ X đã chuẩn hoá")
+plt.ylabel("Toạ độ Y đã chuẩn hoá")
+plt.title("Phân bố tâm bounding box")
 
 plt.savefig(os.path.join(output_dir, "bbox_analysis.png"), bbox_inches="tight")
 plt.close()
 
-# 饼图：类别分布
+# Biểu đồ tròn: phân bố lớp
 plt.figure(figsize=(8, 8))
 plt.pie(
     [train_counts[i] for i in range(len(class_names))],
@@ -180,39 +179,39 @@ plt.pie(
     autopct='%1.1f%%',
     startangle=90
 )
-plt.title("训练集类别分布")
+plt.title("Phân bố lớp của tập train")
 plt.savefig(os.path.join(output_dir, "class_distribution_pie.png"), bbox_inches="tight")
 plt.close()
 
-# 热力图：标注框中心点分布
+# Heatmap: phân bố tâm bounding box
 plt.figure(figsize=(10, 8))
 sns.kdeplot(x=centers_x, y=centers_y, cmap="Reds", shade=True)
-plt.xlabel("归一化X坐标")
-plt.ylabel("归一化Y坐标")
-plt.title("标注框中心点热力图")
+plt.xlabel("Toạ độ X đã chuẩn hoá")
+plt.ylabel("Toạ độ Y đã chuẩn hoá")
+plt.title("Heatmap tâm bounding box")
 plt.savefig(os.path.join(output_dir, "bbox_heatmap.png"), bbox_inches="tight")
 plt.close()
 
-# 箱线图：标注框尺寸分布
+# Boxplot: phân bố kích thước bounding box
 plt.figure(figsize=(10, 6))
-plt.boxplot([widths, heights], labels=["宽度", "高度"])
-plt.xlabel("标注框尺寸")
-plt.ylabel("归一化值")
-plt.title("标注框尺寸箱线图")
+plt.boxplot([widths, heights], labels=["Chiều rộng", "Chiều cao"])
+plt.xlabel("Kích thước bounding box")
+plt.ylabel("Giá trị đã chuẩn hoá")
+plt.title("Boxplot kích thước bounding box")
 plt.savefig(os.path.join(output_dir, "bbox_boxplot.png"), bbox_inches="tight")
 plt.close()
 
-# 条形图：类别不平衡分析
+# Biểu đồ cột: phân tích mất cân bằng lớp
 plt.figure(figsize=(10, 6))
 plt.bar(class_names, [train_counts[i] for i in range(len(class_names))])
-plt.xlabel("类别")
-plt.ylabel("样本数量")
-plt.title("训练集类别样本数量")
+plt.xlabel("Lớp")
+plt.ylabel("Số mẫu")
+plt.title("Số mẫu theo lớp của tập train")
 plt.savefig(os.path.join(output_dir, "class_imbalance.png"), bbox_inches="tight")
 plt.close()
 
 # ----------------------------
-# 生成数据质量报告
+# Tạo báo cáo chất lượng dữ liệu
 # ----------------------------
 if stats['total_images'] > 0:
     missing_percent = stats['missing_labels'] / stats['total_images']
@@ -222,18 +221,18 @@ else:
     corrupted_percent = 0.0
 
 report = f"""
-{'='*20} 数据质量报告 {'='*20}
-总图像数量: {stats['total_images']}
-有效标注图像: {stats['total_images'] - stats['missing_labels'] - stats['corrupted_images']}
-缺失标注文件: {stats['missing_labels']} ({missing_percent:.1%})
-损坏/不可读图像: {stats['corrupted_images']} ({corrupted_percent:.1%})
-无效标注行数: {stats['invalid_annotations']}
+{'='*20} BÁO CÁO CHẤT LƯỢNG DỮ LIỆU {'='*20}
+Tổng số ảnh: {stats['total_images']}
+Ảnh có nhãn hợp lệ: {stats['total_images'] - stats['missing_labels'] - stats['corrupted_images']}
+File nhãn bị thiếu: {stats['missing_labels']} ({missing_percent:.1%})
+Ảnh hỏng/không đọc được: {stats['corrupted_images']} ({corrupted_percent:.1%})
+Số dòng nhãn không hợp lệ: {stats['invalid_annotations']}
 {'='*40}
 """
 
 print(report)
 
-# 保存报告到文件
+# Lưu báo cáo ra file
 report_file_path = os.path.join(output_dir, "data_quality_report.txt")
 with open(report_file_path, "w", encoding="utf-8") as report_file:
     report_file.write(report)

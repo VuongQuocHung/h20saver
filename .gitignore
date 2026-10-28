@@ -178,3 +178,6 @@ cython_debug/
 
 # PyPI configuration file
 .pypirc
+
+# Video kết quả do src/infer_video.py sinh ra (có thể vượt giới hạn 100 MB của GitHub)
+outputs/

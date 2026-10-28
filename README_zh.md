@@ -109,16 +109,18 @@ H20Saver/
   - HSV 调整、平移、缩放、翻转、Mosaic 和 Mixup 等。
 - **优化参数**：
   - 初始学习率：0.001
-  - 最终学习率：0.01
+  - 最终学习率系数（`lrf`）：0.01（最终学习率 = 0.001 × 0.01）
   - 动量：0.937
   - 权重衰减：0.0005
 - **类别平衡**：
-  - 自动计算类别权重
-  - 启用焦点损失
+  - 类别权重仅计算并打印供参考；Ultralytics YOLO 不支持逐类别权重
+  - 未使用焦点损失（`train.py` 中改为将 `cls` 增益提高到 1.0）
 - **模型参数**：
   - 预训练模型：`yolo11x.pt`
-  - 冻结层：`backbone` 和 `head`
-  - 多尺度训练
+  - 冻结层：无
+  - 多尺度训练、AdamW、余弦学习率
+
+> **注意：** 发布的 `best.pt` 以及 `results/training/` 下的所有结果，均使用 [`results/training/args.yaml`](results/training/args.yaml) 中记录的配置训练：`optimizer: auto`、`cos_lr: false`、`multi_scale: false`、`cls: 0.5`。当前 `src/train.py` 使用上面列出的配置，因此用它重新训练不会完全复现这些数值。
 
 ### 训练过程
 
@@ -245,7 +247,7 @@ model.export(format='onnx', imgsz=config.img_size)
 
 ```python
 metrics = model.val()
-print(f"验证结果: mAP@0.5={metrics.box.map:.2f}, mAP@0.5:0.95={metrics.box.map50:.2f}")
+print(f"验证结果: mAP@0.5={metrics.box.map50:.2f}, mAP@0.5:0.95={metrics.box.map:.2f}")
 ```
 
 ## 改进建议

@@ -1,4 +1,5 @@
 ultralytics>=8.0.204
+lap>=0.5.12
 torch>=2.0
 opencv-python>=4.5
 numpy>=1.24.4

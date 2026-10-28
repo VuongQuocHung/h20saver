@@ -5,17 +5,17 @@ from ultralytics import YOLO
 from sklearn.utils.class_weight import compute_class_weight
 
 # ----------------------------
-# 配置参数
+# Tham số cấu hình
 # ----------------------------
 class CustomConfig:
-    # 数据参数
+    # Tham số dữ liệu
     data_yaml = "dataset/data.yaml"
     img_size = 640
     batch_size = 23
     epochs = 100
     patience = 10
 
-    # 数据增强参数
+    # Tham số tăng cường dữ liệu
     augment = {
         "hsv_h": 0.015,
         "hsv_s": 0.7,
@@ -27,31 +27,31 @@ class CustomConfig:
         "mixup": 0.2,
     }
 
-    # 优化参数
+    # Tham số tối ưu
     lr0 = 0.001
     lrf = 0.01
     momentum = 0.937
     weight_decay = 0.0005
 
-    # 损失函数权重 (Ultralytics 原生参数: box / cls / dfl)
-    # cls 权重从默认 0.5 提高到 1.0 以应对类别不平衡
+    # Trọng số hàm loss (tham số gốc của Ultralytics: box / cls / dfl)
+    # Tăng trọng số cls từ mặc định 0.5 lên 1.0 để xử lý mất cân bằng lớp
     loss_box_gain: float = 7.5
     loss_cls_gain: float = 1.0
     loss_dfl_gain: float = 1.5
 
-    # 模型参数
+    # Tham số model
     pretrained = "yolo11x.pt"
-    freeze_layers = None       # list[int] | None, 如 [0, 1, 2] 冻结前 3 层
+    freeze_layers = None       # list[int] | None, ví dụ [0, 1, 2] là đóng băng 3 lớp đầu
     multi_scale: bool = True
 
-    # 训练输出
+    # Đầu ra của quá trình train
     project: str = "runs/detect"
     experiment_name: str = "h20saver"
     resume: bool = False
 
 
 # ----------------------------
-# 数据准备：分析类别分布
+# Chuẩn bị dữ liệu: phân tích phân bố lớp
 # ----------------------------
 def prepare_dataset(config):
     with open(config.data_yaml, encoding="utf-8") as f:
@@ -81,14 +81,14 @@ def prepare_dataset(config):
     weights = compute_class_weight("balanced", classes=classes, y=train_labels)
     class_weights = {int(k): round(float(v), 3) for k, v in zip(classes, weights)}
 
-    print(f"[数据] 类别权重 (仅供参考): {class_weights}")
-    print("[数据] 注意: Ultralytics YOLO 不支持直接注入逐类别权重。")
-    print("[数据] 若类别不平衡严重, 请通过数据增强或过采样补充少数类。")
+    print(f"[Dữ liệu] Trọng số lớp (chỉ để tham khảo): {class_weights}")
+    print("[Dữ liệu] Lưu ý: Ultralytics YOLO không hỗ trợ truyền trực tiếp trọng số cho từng lớp.")
+    print("[Dữ liệu] Nếu mất cân bằng lớp nghiêm trọng, hãy bổ sung lớp thiểu số bằng tăng cường dữ liệu hoặc oversampling.")
     return class_weights
 
 
 # ----------------------------
-# 模型训练
+# Train model
 # ----------------------------
 def train_yolo(config):
     model = YOLO(config.pretrained)
@@ -110,7 +110,7 @@ def train_yolo(config):
         "project": config.project,
         "name": config.experiment_name,
         "resume": config.resume,
-        # 数据增强
+        # Tăng cường dữ liệu
         "hsv_h": config.augment["hsv_h"],
         "hsv_s": config.augment["hsv_s"],
         "hsv_v": config.augment["hsv_v"],
@@ -119,41 +119,41 @@ def train_yolo(config):
         "fliplr": config.augment["fliplr"],
         "mosaic": config.augment["mosaic"],
         "mixup": config.augment["mixup"],
-        # 损失函数增益 — YOLO11 内置 DFL，cls 增益提高缓解类别不平衡
+        # Hệ số loss — YOLO11 có sẵn DFL, tăng hệ số cls để giảm mất cân bằng lớp
         "box": config.loss_box_gain,
         "cls": config.loss_cls_gain,
         "dfl": config.loss_dfl_gain,
     }
 
     print("=" * 40)
-    print("  开始模型训练...")
+    print("  Bắt đầu train model...")
     print("=" * 40)
 
     results = model.train(**train_kwargs)
 
     final_weights = f"{config.experiment_name}_final.pt"
     model.save(final_weights)
-    print(f"[权重] 已保存至: {final_weights}")
+    print(f"[Trọng số] Đã lưu tại: {final_weights}")
 
     return model
 
 
 # ----------------------------
-# 主程序
+# Chương trình chính
 # ----------------------------
 if __name__ == "__main__":
     config = CustomConfig()
     class_weights = prepare_dataset(config)
     model = train_yolo(config)
 
-    # 导出 ONNX (FP16 半精度简化推理)
-    print("\n[导出] 正在导出 ONNX 模型...")
+    # Xuất ONNX (FP16 nửa độ chính xác, đơn giản hoá để suy luận)
+    print("\n[Xuất] Đang xuất model ONNX...")
     model.export(format="onnx", imgsz=config.img_size, half=True, simplify=True)
 
-    # 验证
-    print("\n[验证] 正在评估模型...")
+    # Kiểm định
+    print("\n[Kiểm định] Đang đánh giá model...")
     metrics = model.val()
     print(
-        f"验证结果: mAP@0.5={metrics.box.map:.3f}, "
-        f"mAP@0.5:0.95={metrics.box.map50:.3f}"
+        f"Kết quả kiểm định: mAP@0.5={metrics.box.map50:.3f}, "
+        f"mAP@0.5:0.95={metrics.box.map:.3f}"
     )
